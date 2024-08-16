@@ -1,0 +1,17 @@
+{
+  // // Disable all suggestions
+  // "editor.quickSuggestions": {
+  //   "comments": "off",
+  //   "strings": "off",
+  //   "other": "off"
+  // },
+  // // "editor.suggestOnTriggerCharacters": false,
+  // // "editor.acceptSuggestionOnEnter": "off",
+  // "editor.acceptSuggestionOnCommitCharacter": false,
+  // "editor.snippetSuggestions": "none",
+  // "editor.parameterHints.enabled": false,
+
+  // Remove editor line numbering
+  // "editor.lineNumbers": "off",
+  "editor.guides.indentation": false
+}
