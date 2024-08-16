@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -22,6 +23,7 @@ func (p PathKey) FullPath() string {
 	return fmt.Sprintf("%s/%s", p.PathName, p.FileName)
 }
 
+// FirstPathName returns the 'root' directory of the file
 func (p PathKey) FirstPathName() string {
 	paths := strings.Split(p.PathName, "/")
 
@@ -31,7 +33,7 @@ func (p PathKey) FirstPathName() string {
 	return paths[0]
 }
 
-// Content addressable path transform function
+// Content addressable path transform function, transforms the given key to a path on the disk
 func CASPathTransformFunc(key string) PathKey {
 	// generate the hash for the key
 	hash := sha1.Sum([]byte(key))
@@ -92,13 +94,16 @@ func NewStore(opts StoreOpts) *Store {
 	}
 }
 
-// func (s *Store) Has(key string) bool {
-// 	pathKey := s.PathTransformFunc(key)
+func (s *Store) Has(key string) bool {
+	pathKey := s.PathTransformFunc(key)
 
-// 	_, err := os.Stat(pathKey.FullPath())
-
-// 	if fs
-// }
+	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
+	_, err := os.Stat(fullPathWithRoot)
+	if fs.ErrNotExist == err {
+		return false
+	}
+	return true
+}
 
 func (s *Store) Delete(key string) error {
 	pathKey := s.PathTransformFunc(key)
@@ -107,8 +112,9 @@ func (s *Store) Delete(key string) error {
 		log.Printf("deleted [%s] from disk", pathKey.FileName)
 	}()
 
+	pathKeyWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FirstPathName())
 	// remove the parent directory
-	return os.RemoveAll(pathKey.FirstPathName())
+	return os.RemoveAll(pathKeyWithRoot)
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {
@@ -126,7 +132,8 @@ func (s *Store) Read(key string) (io.Reader, error) {
 
 func (s *Store) readStream(key string) (io.ReadCloser, error) {
 	pathKey := s.PathTransformFunc(key)
-	return os.Open(pathKey.FullPath())
+	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
+	return os.Open(fullPathWithRoot)
 }
 
 func (s *Store) writeStream(key string, r io.Reader) error {
@@ -134,19 +141,14 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 	// creates the path of the file based on the key
 	pathKey := s.PathTransformFunc(key)
 
+	// path without the filename
 	pathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.PathName)
 	// creates file within the path structure (MkDir creates just the file)
 	if err := os.MkdirAll(pathNameWithRoot, os.ModePerm); err != nil {
 		return err
 	}
 
-	// // reads from the reader and copies it to buf
-	// buf := new(bytes.Buffer)
-	// io.Copy(buf, r)
-
-	// // creates a file name based on the key
-	// fileNameBytes := md5.Sum(buf.Bytes())
-	// fileNameString := hex.EncodeToString(fileNameBytes[:])
+	// path with the file name
 	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
 
 	// creates a new file, if file already exists it truncates the file(clears the contents)
