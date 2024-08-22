@@ -24,11 +24,8 @@ func TestPathTransformFunc(t *testing.T) {
 }
 
 func TestStoreDeleteKey(t *testing.T) {
-	opts := StoreOpts{
-		PathTransformFunc: CASPathTransformFunc,
-	}
-
-	store := NewStore(opts)
+	store := newStore()
+	defer tearDown(store, t)
 
 	key := "hellohibyebye"
 	data := []byte("why you still here? i said bye")
@@ -47,11 +44,8 @@ func TestStoreDeleteKey(t *testing.T) {
 }
 
 func TestStore(t *testing.T) {
-	opts := StoreOpts{
-		PathTransformFunc: CASPathTransformFunc,
-	}
-
-	s := NewStore(opts)
+	s := newStore()
+	defer tearDown(s, t)
 
 	key := "sumn special"
 	data := []byte("some jpg bytes")
@@ -75,5 +69,23 @@ func TestStore(t *testing.T) {
 		t.Error()
 	}
 
-	s.Delete(key)
+	if err := s.Delete(key); err != nil {
+		t.Error(err)
+	}
+}
+
+// helpers
+
+func newStore() *Store {
+	opts := StoreOpts{
+		PathTransformFunc: CASPathTransformFunc,
+	}
+
+	return NewStore(opts)
+}
+
+func tearDown(s *Store, t *testing.T) {
+	if err := s.Clear(); err != nil {
+		t.Error(err)
+	}
 }

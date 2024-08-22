@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -99,10 +99,12 @@ func (s *Store) Has(key string) bool {
 
 	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
 	_, err := os.Stat(fullPathWithRoot)
-	if fs.ErrNotExist == err {
-		return false
-	}
-	return true
+
+	return !errors.Is(err, os.ErrNotExist)
+}
+
+func (s *Store) Clear() error {
+	return os.RemoveAll(s.Root)
 }
 
 func (s *Store) Delete(key string) error {
@@ -115,6 +117,10 @@ func (s *Store) Delete(key string) error {
 	pathKeyWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FirstPathName())
 	// remove the parent directory
 	return os.RemoveAll(pathKeyWithRoot)
+}
+
+func (s *Store) Write(key string, r io.Reader) error {
+	return s.writeStream(key, r)
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {
